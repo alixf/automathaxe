@@ -1,1 +1,1 @@
-->![Logo](http://www.eolhing.me/images/automathaxe.png)<-
+![Logo](http://www.eolhing.me/images/automathaxe.png)
