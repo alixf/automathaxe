@@ -82,11 +82,9 @@ class StateMachine
 	}
 	public function mirror() : StateMachine
 	{
-		/*TODO
+		var res = copy();
 
-		var res = new StateMachine();
-
-		for(state in states)
+		for(state in res.states)
 		{
 			var tmp1 = state.ins;
 			state.ins = state.outs;
@@ -95,7 +93,7 @@ class StateMachine
 			state.isFinal = state.isInitial;
 			state.isInitial = tmp2;
 		}
-		for(edge in edges)
+		for(edge in res.edges)
 		{
 			var tmp = edge.to;
 			edge.to = edge.from;
@@ -103,8 +101,6 @@ class StateMachine
 		}
 
 		return res;
-		*/
-		return null;
 	}
 	public function determine() : StateMachine
 	{
@@ -134,16 +130,18 @@ class StateMachine
 		for(state in states)
 		{
 			if(state.isInitial && state.isFinal)
-				res += state.name+" [shape=doubleoctagon];";
+				res += "\t"+state.name+" [shape=doubleoctagon];\n";
 			else if(state.isFinal)
-				res += state.name+" [shape=doublecircle];";
+				res += "\t"+state.name+" [shape=doublecircle];\n";
 			else if(state.isInitial)
-				res += state.name+" [shape=octagon];";
+				res += "\t"+state.name+" [shape=octagon];\n";
 			else
-				res += state.name+" [shape=circle];";
-
+				res += "\t"+state.name+" [shape=circle];\n";
+		}
+		for(state in states)
+		{
 			for(edge in state.outs)
-				res += edge.from.name + " -> " + edge.to.name + " [label=\"" + edge.value + "\"];\n";
+				res += "\t"+edge.from.name + " -> " + edge.to.name + " [label=\"" + edge.value + "\"];\n";
 		}
 		res += "}";
 		return res;
@@ -196,7 +194,7 @@ class StateMachine
 		m2.saveAsPNG();
 		*/
 		
-		///
+		/*//
 		// Completion test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
@@ -208,6 +206,20 @@ class StateMachine
 		m1.addEdge(new Edge("b", s2, s3));
 		m1.addEdge(new Edge("b", s3, s0));
 		m1.complete().saveAsPNG();
+		//*/
+
+		///
+		// Mirror test
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		m1.addEdge(new Edge("a", s0, s1));
+		m1.addEdge(new Edge("a", s1, s2));
+		m1.addEdge(new Edge("b", s2, s3));
+		m1.addEdge(new Edge("b", s3, s0));
+		m1.mirror().saveAsPNG();
 		//*/
 
 		return 0;
