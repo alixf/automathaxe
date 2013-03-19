@@ -1,14 +1,16 @@
 class StateMachine
 {
+	var name : String;
+	var alphabet : Array<String>;
 	var states : Array<State>;
 	var edges : Array<Edge>;
-	var name : String;
 
-	public function new(name : String)
+	public function new(name : String, alphabet : Array<String>)
 	{
+		this.name = name;
+		this.alphabet = alphabet;
 		states = new Array();
 		edges = new Array();
-		this.name = name;
 	}
 
 	public function addState(state : State)
@@ -33,7 +35,25 @@ class StateMachine
 
 	public function complete() : StateMachine
 	{
-		//TODO
+		// TODO need deep copy to return a new graph
+		
+		var well = new State("W", false, false);
+		addState(well);
+
+		for(state in states)
+		{
+			for(lexem in alphabet)
+			{
+				var found = false;
+				for(outEdge in state.outs)
+					if(outEdge.value == lexem)
+						found = true;
+
+				if(!found)
+					addEdge(new Edge(lexem, state, well));
+			}
+		}
+
 		return null;
 	}
 	public function union(sm : StateMachine) : StateMachine
@@ -123,6 +143,22 @@ class StateMachine
 
 	public static function main() : Int
 	{
+		/* 
+		Completion test
+		
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		m1.addState(new State("0", true, false));
+		m1.addState(new State("1", false, false));
+		m1.addState(new State("2", false, false));
+		m1.addState(new State("3", false, true));
+		m1.addEdge(new Edge("a", m1.getState("0"), m1.getState("1")));
+		m1.addEdge(new Edge("a", m1.getState("1"), m1.getState("2")));
+		m1.addEdge(new Edge("b", m1.getState("2"), m1.getState("3")));
+		m1.addEdge(new Edge("b", m1.getState("3"), m1.getState("0")));
+		m1.complete();
+		m1.saveAsPNG();
+		*/
+
 		var m1 = new StateMachine("m1");
 		m1.addState(new State("0", true, true));
 		m1.addState(new State("1", false, false));
