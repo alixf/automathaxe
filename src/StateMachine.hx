@@ -13,12 +13,13 @@ class StateMachine
 		edges = new Array();
 	}
 
-	public function addState(state : State)
+	public function addState(state : State) : State
 	{
 		states.push(state);
+		return state;
 	}
 
-	public function getState(name : String)
+	public function getState(name : String) : State
 	{
 		for(state in states)
 			if(state.name == name)
@@ -26,17 +27,18 @@ class StateMachine
 		return null;
 	}
 
-	public function addEdge(edge : Edge)
+	public function addEdge(edge : Edge) : Edge
 	{
 		edge.from.outs.push(edge);
 		edge.to.ins.push(edge);
 		edges.push(edge);
+		return edge;
 	}
 
 	public function complete() : StateMachine
 	{
 		// TODO need deep copy to return a new graph
-		
+
 		var well = new State("W", false, false);
 		addState(well);
 
@@ -143,58 +145,59 @@ class StateMachine
 
 	public static function main() : Int
 	{
+
+		var m1 = new StateMachine("m1", ["a", "b"]);
+		var s0 = m1.addState(new State("0", true, true));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		var s4 = m1.addState(new State("4", false, true));
+		var s5 = m1.addState(new State("5", false, false));
+		var s6 = m1.addState(new State("6", false, true));
+		var s7 = m1.addState(new State("7", false, true));
+		m1.addEdge(new Edge("a", s0, s2));
+		m1.addEdge(new Edge("b", s0, s1));
+		m1.addEdge(new Edge("a", s1, s2));
+		m1.addEdge(new Edge("b", s1, s1));
+		m1.addEdge(new Edge("a", s2, s3));
+		m1.addEdge(new Edge("b", s2, s2));
+		m1.addEdge(new Edge("a", s3, s2));
+		m1.addEdge(new Edge("b", s3, s6));
+		m1.addEdge(new Edge("a", s4, s5));
+		m1.addEdge(new Edge("b", s4, s4));
+		m1.addEdge(new Edge("a", s5, s6));
+		m1.addEdge(new Edge("b", s5, s5));
+		m1.addEdge(new Edge("a", s6, s5));
+		m1.addEdge(new Edge("b", s6, s7));
+		m1.addEdge(new Edge("a", s7, s5));
+		m1.addEdge(new Edge("b", s7, s3));
+		m1.saveAsPNG();
+
+		var m2 = new StateMachine("m2", ["a", "b"]);
+		var s1 = m2.addState(new State("1", true, false));
+		var s2 = m2.addState(new State("2", false, true));
+		var s3 = m2.addState(new State("3", false, true));
+		m2.addEdge(new Edge("a", s1, s2));
+		m2.addEdge(new Edge("a", s3, s1));
+		m2.addEdge(new Edge("b", s2, s3));
+		m2.addEdge(new Edge("b", s3, s2));
+		m2.saveAsPNG();
+		
 		/* 
 		Completion test
 		
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		m1.addState(new State("0", true, false));
-		m1.addState(new State("1", false, false));
-		m1.addState(new State("2", false, false));
-		m1.addState(new State("3", false, true));
-		m1.addEdge(new Edge("a", m1.getState("0"), m1.getState("1")));
-		m1.addEdge(new Edge("a", m1.getState("1"), m1.getState("2")));
-		m1.addEdge(new Edge("b", m1.getState("2"), m1.getState("3")));
-		m1.addEdge(new Edge("b", m1.getState("3"), m1.getState("0")));
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		m1.addEdge(new Edge("a", s0, s1));
+		m1.addEdge(new Edge("a", s1, s2));
+		m1.addEdge(new Edge("b", s2, s3));
+		m1.addEdge(new Edge("b", s3, s0));
 		m1.complete();
 		m1.saveAsPNG();
 		*/
-
-		var m1 = new StateMachine("m1");
-		m1.addState(new State("0", true, true));
-		m1.addState(new State("1", false, false));
-		m1.addState(new State("2", false, false));
-		m1.addState(new State("3", false, true));
-		m1.addState(new State("4", false, true));
-		m1.addState(new State("5", false, false));
-		m1.addState(new State("6", false, true));
-		m1.addState(new State("7", false, true));
-		m1.addEdge(new Edge("a", m1.getState("0"), m1.getState("2")));
-		m1.addEdge(new Edge("b", m1.getState("0"), m1.getState("1")));
-		m1.addEdge(new Edge("a", m1.getState("1"), m1.getState("2")));
-		m1.addEdge(new Edge("b", m1.getState("1"), m1.getState("1")));
-		m1.addEdge(new Edge("a", m1.getState("2"), m1.getState("3")));
-		m1.addEdge(new Edge("b", m1.getState("2"), m1.getState("2")));
-		m1.addEdge(new Edge("a", m1.getState("3"), m1.getState("2")));
-		m1.addEdge(new Edge("b", m1.getState("3"), m1.getState("6")));
-		m1.addEdge(new Edge("a", m1.getState("4"), m1.getState("5")));
-		m1.addEdge(new Edge("b", m1.getState("4"), m1.getState("4")));
-		m1.addEdge(new Edge("a", m1.getState("5"), m1.getState("6")));
-		m1.addEdge(new Edge("b", m1.getState("5"), m1.getState("5")));
-		m1.addEdge(new Edge("a", m1.getState("6"), m1.getState("5")));
-		m1.addEdge(new Edge("b", m1.getState("6"), m1.getState("7")));
-		m1.addEdge(new Edge("a", m1.getState("7"), m1.getState("5")));
-		m1.addEdge(new Edge("b", m1.getState("7"), m1.getState("3")));
-		m1.saveAsPNG();
-
-		var m2 = new StateMachine("m2");
-		m2.addState(new State("1", true, false));
-		m2.addState(new State("2", false, true));
-		m2.addState(new State("3", false, true));
-		m2.addEdge(new Edge("a", m2.getState("1"), m2.getState("2")));
-		m2.addEdge(new Edge("a", m2.getState("3"), m2.getState("1")));
-		m2.addEdge(new Edge("b", m2.getState("2"), m2.getState("3")));
-		m2.addEdge(new Edge("b", m2.getState("3"), m2.getState("2")));
-		m2.saveAsPNG();
 
 		return 0;
 	}
