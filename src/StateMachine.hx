@@ -35,29 +35,41 @@ class StateMachine
 		return edge;
 	}
 
+	public function copy() : StateMachine
+	{
+		var res = new StateMachine(new String(name), alphabet.copy());
+		for(state in states)
+			res.addState(new State(new String(state.name), state.isInitial, state.isFinal));
+		for(edge in edges)
+			res.addEdge(new Edge(new String(edge.value), res.getState(edge.from.name), res.getState(edge.to.name)));
+		return res;
+	}
+
 	public function complete() : StateMachine
 	{
-		// TODO need deep copy to return a new graph
+		var res = copy();
 
 		var well = new State("W", false, false);
-		addState(well);
+		res.addState(well);
 
-		for(state in states)
+		for(state in res.states)
 		{
-			for(lexem in alphabet)
+			for(lexem in res.alphabet)
 			{
 				var found = false;
 				for(outEdge in state.outs)
+				{
 					if(outEdge.value == lexem)
 						found = true;
+				}
 
 				if(!found)
-					addEdge(new Edge(lexem, state, well));
+					res.addEdge(new Edge(lexem, state, well));
 			}
 		}
-
-		return null;
+		return res;
 	}
+
 	public function union(sm : StateMachine) : StateMachine
 	{
 		//TODO
@@ -145,7 +157,7 @@ class StateMachine
 
 	public static function main() : Int
 	{
-
+		/*
 		var m1 = new StateMachine("m1", ["a", "b"]);
 		var s0 = m1.addState(new State("0", true, true));
 		var s1 = m1.addState(new State("1", false, false));
@@ -171,7 +183,7 @@ class StateMachine
 		m1.addEdge(new Edge("b", s6, s7));
 		m1.addEdge(new Edge("a", s7, s5));
 		m1.addEdge(new Edge("b", s7, s3));
-		m1.saveAsPNG();
+		m12.saveAsPNG();
 
 		var m2 = new StateMachine("m2", ["a", "b"]);
 		var s1 = m2.addState(new State("1", true, false));
@@ -182,10 +194,10 @@ class StateMachine
 		m2.addEdge(new Edge("b", s2, s3));
 		m2.addEdge(new Edge("b", s3, s2));
 		m2.saveAsPNG();
+		*/
 		
-		/* 
-		Completion test
-		
+		///
+		// Completion test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
 		var s1 = m1.addState(new State("1", false, false));
@@ -195,9 +207,8 @@ class StateMachine
 		m1.addEdge(new Edge("a", s1, s2));
 		m1.addEdge(new Edge("b", s2, s3));
 		m1.addEdge(new Edge("b", s3, s0));
-		m1.complete();
-		m1.saveAsPNG();
-		*/
+		m1.complete().saveAsPNG();
+		//*/
 
 		return 0;
 	}
