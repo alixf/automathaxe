@@ -72,14 +72,61 @@ class StateMachine
 
 	public function union(sm : StateMachine) : StateMachine
 	{
-		//TODO
-		return null;
+		// Make local copies to work on
+		var sm1 = this.copy();
+		var sm2 = sm.copy();
+		var res = new StateMachine(new String(name), alphabet.copy());
+
+		// Rename the states to prevent collision
+		var i = 0;
+		for(state in sm1.states)
+			state.name = Std.string(++i);
+		for(state in sm2.states)
+			state.name = Std.string(++i);
+
+		// Merge the copies
+		for(state in sm1.states)
+			res.addState(new State(new String(state.name), state.isInitial, state.isFinal));
+		for(edge in sm1.edges)
+			res.addEdge(new Edge(new String(edge.value), res.getState(edge.from.name), res.getState(edge.to.name)));
+		for(state in sm2.states)
+			res.addState(new State(new String(state.name), state.isInitial, state.isFinal));
+		for(edge in sm2.edges)
+			res.addEdge(new Edge(new String(edge.value), res.getState(edge.from.name), res.getState(edge.to.name)));
+
+		// Create the bounding states
+		var start = res.addState(new State("S", false, false));
+		var end = res.addState(new State("E", false, false));
+
+		// Bound states to bounding states and remove their attributes
+		for(state in res.states)
+		{
+			if(state.isInitial)
+			{
+				res.addEdge(new Edge("", start, state));
+				state.isInitial = false;
+			}
+			if(state.isFinal)
+			{
+				res.addEdge(new Edge("", state, end));
+				state.isFinal = false;
+			}
+		}
+
+		// Set correct attributes to bounding states
+		start.isInitial = true;
+		end.isFinal = true;
+
+		// Return the result
+		return res;
 	}
+
 	public function intersect(sm : StateMachine) : StateMachine
 	{
 		//TODO
 		return null;
 	}
+
 	public function mirror() : StateMachine
 	{
 		var res = copy();
@@ -102,21 +149,25 @@ class StateMachine
 
 		return res;
 	}
+	
 	public function determine() : StateMachine
 	{
 		//TODO
 		return null;
 	}
+	
 	public function complement() : StateMachine
 	{
 		//TODO
 		return null;
 	}
+	
 	public function minimize() : StateMachine 
 	{
 		//TODO
 		return null;
 	}
+	
 	public static function fromExpression(expression : String) : StateMachine
 	{
 		//TODO
@@ -150,7 +201,7 @@ class StateMachine
 	public function saveAsPNG() : Void
 	{
 		sys.io.File.saveContent(name+".gv", toDOT());
-		Sys.command("neato -Tpng -o"+name+".png "+name+".gv");
+		Sys.command("dot -Tpng -o"+name+".png "+name+".gv");
 	}
 
 	public static function main() : Int
@@ -208,7 +259,7 @@ class StateMachine
 		m1.complete().saveAsPNG();
 		//*/
 
-		///
+		/*//
 		// Mirror test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
@@ -220,6 +271,20 @@ class StateMachine
 		m1.addEdge(new Edge("b", s2, s3));
 		m1.addEdge(new Edge("b", s3, s0));
 		m1.mirror().saveAsPNG();
+		//*/
+
+		///
+		// Union test
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		m1.addEdge(new Edge("a", s0, s1));
+		m1.addEdge(new Edge("a", s1, s2));
+		m1.addEdge(new Edge("b", s2, s3));
+		m1.addEdge(new Edge("b", s3, s0));
+		m1.union(m1).saveAsPNG();
 		//*/
 
 		return 0;
