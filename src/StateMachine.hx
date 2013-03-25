@@ -19,6 +19,11 @@ class StateMachine
 		return state;
 	}
 
+	public function removeState(state : State) : State
+	{
+		return states.remove(state) ? state : null;
+	}
+
 	public function getState(name : String) : State
 	{
 		for(state in states)
@@ -123,8 +128,44 @@ class StateMachine
 
 	public function intersect(sm : StateMachine) : StateMachine
 	{
-		//TODO
-		return null;
+		// Make local copies to work on
+		var sm1 = this.copy();
+		var sm2 = sm.copy();
+		var res = new StateMachine(new String(name), alphabet.copy());
+
+		// Rename the states to prevent collision
+		var i = 0;
+		for(state in sm1.states)
+			state.name = Std.string(++i);
+		for(state in sm2.states)
+			state.name = Std.string(++i);
+
+		// Consider every couple of state from the two machines as a state in the result
+		for(state1 in sm1.states)
+			for(state2 in sm2.states)
+				res.addState(new State("a"+state1.name+"b"+state2.name, state1.isInitial && state2.isInitial, state1.isFinal && state2.isFinal));
+
+		// Consider two couples of states (s1,s2) and (s3,s4) as created before
+		// Create an edge labelled as 'a' only if there is :
+		// an edge with the label 'a' from s1 to s3 and an edge with the label 'a' from s2 to s4
+		for(s1 in sm1.states)
+			for(s2 in sm2.states)
+				for(s3 in sm1.states)
+					for(s4 in sm2.states)
+						for(lexem in res.alphabet)
+							if(s1.getEdgeTo(s3, lexem) != null && s2.getEdgeTo(s4, lexem) != null)
+								res.addEdge(new Edge(lexem, res.getState("a"+s1.name+"b"+s2.name), res.getState("a"+s3.name+"b"+s4.name)));
+
+		// Remove uneeded states
+		for(state in res.states)
+			if(state.ins.length == 0 && state.outs.length == 0)
+				res.removeState(state);
+
+		var i = 0;
+		for(state in res.states)
+			state.name = Std.string(++i);
+
+		return res;
 	}
 
 	public function mirror() : StateMachine
@@ -149,25 +190,73 @@ class StateMachine
 
 		return res;
 	}
-	
+
 	public function determine() : StateMachine
 	{
+		var res = copy();
+
+		var map = new Map<Array<State>, Map<String, Array<State>>>();
+
+		// Initialize map with current states
+		for(state in res.states)
+		{
+			var key = [state];
+			map.set(key, new Map<String, Array<State>>());
+			for(lexem in res.alphabet)
+				map.get(key).set(lexem, new Array());
+		}
+
+		for(key in map.keys())
+		{
+			for(state in key)
+			{
+				for(edge in state.outs)
+					map.get(key).get(edge.value).push(edge.to);
+
+				for(lexem in res.alphabet)
+				{
+					var possibleNewKey = map.get(key).get(lexem);
+					if(possibleNewKey.length > 0)
+					{
+						// TODO check existence
+
+						Sys.print("[");
+						for(pouet in possibleNewKey)
+							Sys.print(pouet.name+" ");
+						Sys.println("] ");
+
+						map.set(possibleNewKey, new Map<String, Array<State>>());
+						for(lexem in res.alphabet)
+							map.get(possibleNewKey).set(lexem, new Array());
+					}
+				}
+			}
+		}
+
+		for(key in map.keys())
+		{
+			Sys.print("[");
+			for(state in key)
+				Sys.print(state.name+" ");
+			Sys.println("]");
+		}
+
 		//TODO
-		return null;
+		return res;
 	}
-	
+
 	public function complement() : StateMachine
 	{
 		//TODO
 		return null;
 	}
-	
+
 	public function minimize() : StateMachine 
 	{
 		//TODO
 		return null;
 	}
-	
+
 	public static function fromExpression(expression : String) : StateMachine
 	{
 		//TODO
@@ -273,7 +362,7 @@ class StateMachine
 		m1.mirror().saveAsPNG();
 		//*/
 
-		///
+		/*//
 		// Union test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
@@ -286,6 +375,45 @@ class StateMachine
 		m1.addEdge(new Edge("b", s3, s0));
 		m1.union(m1).saveAsPNG();
 		//*/
+
+		/*//
+		// Intersection test
+		var m1 = new StateMachine("m1", ["a", "b"]);
+		var s0 = m1.addState(new State("0", true, true));
+		var s1 = m1.addState(new State("1", false, false));
+		m1.addEdge(new Edge("a", s0, s0));
+		m1.addEdge(new Edge("a", s1, s1));
+		m1.addEdge(new Edge("b", s0, s1));
+		m1.addEdge(new Edge("b", s1, s0));
+
+		var m2 = new StateMachine("m2", ["a", "b"]);
+		var s2 = m2.addState(new State("2", true, true));
+		var s3 = m2.addState(new State("3", false, false));
+		var s4 = m2.addState(new State("4", false, false));
+		m2.addEdge(new Edge("a", s2, s2));
+		m2.addEdge(new Edge("a", s3, s3));
+		m2.addEdge(new Edge("a", s4, s4));
+		m2.addEdge(new Edge("b", s2, s3));
+		m2.addEdge(new Edge("b", s3, s4));
+		m2.addEdge(new Edge("b", s4, s2));
+
+		m1.intersect(m2).saveAsPNG();
+		//*/
+
+		///
+		// Determinization test
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		m1.addEdge(new Edge("a", s0, s1));
+		m1.addEdge(new Edge("a", s1, s2));
+		m1.addEdge(new Edge("b", s2, s3));
+		m1.addEdge(new Edge("b", s3, s0));
+		m1.determine();
+		//*/
+		
 
 		return 0;
 	}
