@@ -21,6 +21,11 @@ class StateMachine
 
 	public function removeState(state : State) : State
 	{
+		var it = state.ins.iterator();
+		for(edge in state.ins.copy())
+			removeEdge(edge);
+		for(edge in state.outs.copy())
+			removeEdge(edge);
 		return states.remove(state) ? state : null;
 	}
 
@@ -40,6 +45,13 @@ class StateMachine
 		return edge;
 	}
 
+	public function removeEdge(edge : Edge) : Edge
+	{
+		edge.from.outs.remove(edge);
+		edge.to.ins.remove(edge);
+		return edges.remove(edge) ? edge : null;
+	}
+
 	public function copy() : StateMachine
 	{
 		var res = new StateMachine(new String(name), alphabet.copy());
@@ -52,10 +64,9 @@ class StateMachine
 
 	public function complete() : StateMachine
 	{
+		// Create a copy with a well
 		var res = copy();
-
-		var well = new State("W", false, false);
-		res.addState(well);
+		var well = res.addState(new State("W", false, false));
 
 		for(state in res.states)
 		{
@@ -63,15 +74,24 @@ class StateMachine
 			{
 				var found = false;
 				for(outEdge in state.outs)
-				{
-					if(outEdge.value == lexem)
-					found = true;
-				}
+					found = found || (outEdge.value == lexem);
 
 				if(!found)
-				res.addEdge(new Edge(lexem, state, well));
+					res.addEdge(new Edge(lexem, state, well));
 			}
 		}
+
+		//
+		// Try to remove well if it is unnecessary
+		//
+		var wellIsNecessary = false;
+		for(edge in well.ins)
+			wellIsNecessary = wellIsNecessary || (edge.from != well);
+		for(edge in well.outs)
+			wellIsNecessary = wellIsNecessary || (edge.to != well);
+		if(!wellIsNecessary)
+			res.removeState(well) == null;
+
 		return res;
 	}
 
@@ -311,8 +331,11 @@ class StateMachine
 
 	public function complement() : StateMachine
 	{
-		//TODO
-		return null;
+		var res = determinize();
+		res = res.complete();
+		for(state in res.states)
+			state.isFinal = !state.isFinal;
+		return res;
 	}
 
 	public function minimize() : StateMachine 
@@ -486,7 +509,7 @@ class StateMachine
 			m1.addEdge(new Edge(lexem, s3, s1));
 			m1.addEdge(new Edge(lexem, s3, s2));
 		}
-		m1.determinize().saveAsPNG();
+		m1.complement().saveAsPNG();
 		//*/
 		
 
