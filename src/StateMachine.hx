@@ -340,8 +340,7 @@ class StateMachine
 
 	public function minimize() : StateMachine 
 	{
-		//TODO
-		return null;
+		return determinize().mirror().determinize().mirror();
 	}
 
 	public static function fromExpression(expression : String) : StateMachine
@@ -357,13 +356,13 @@ class StateMachine
 		for(state in states)
 		{
 			if(state.isInitial && state.isFinal)
-				res += "\t"+state.name+" [shape=doubleoctagon];\n";
+				res += "\t"+state.name+" [shape=diamond,peripheries=2];\n";
 			else if(state.isFinal)
-				res += "\t"+state.name+" [shape=doublecircle];\n";
+				res += "\t"+state.name+" [shape=ellipse,peripheries=2];\n";
 			else if(state.isInitial)
-				res += "\t"+state.name+" [shape=octagon];\n";
+				res += "\t"+state.name+" [shape=diamond];\n";
 			else
-				res += "\t"+state.name+" [shape=circle];\n";
+				res += "\t"+state.name+" [shape=ellipse];\n";
 		}
 		for(state in states)
 		{
@@ -512,7 +511,7 @@ class StateMachine
 		m1.determinize().saveAsPNG();
 		//*/
 
-		///
+		/*//
 		// Complementation test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
@@ -537,6 +536,31 @@ class StateMachine
 		m1.complement().saveAsPNG();
 		//*/
 		
+		///
+		// Minimization test
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		for(lexem in m1.alphabet)
+		{	
+			m1.addEdge(new Edge(lexem, s0, s1));
+			m1.addEdge(new Edge(lexem, s0, s2));
+			m1.addEdge(new Edge(lexem, s0, s3));
+			m1.addEdge(new Edge(lexem, s1, s0));
+			m1.addEdge(new Edge(lexem, s1, s2));
+			m1.addEdge(new Edge(lexem, s1, s3));
+			m1.addEdge(new Edge(lexem, s2, s0));
+			m1.addEdge(new Edge(lexem, s2, s1));
+			m1.addEdge(new Edge(lexem, s2, s3));
+			m1.addEdge(new Edge(lexem, s3, s0));
+			m1.addEdge(new Edge(lexem, s3, s1));
+			m1.addEdge(new Edge(lexem, s3, s2));
+		}
+		m1.minimize().saveAsPNG();
+		//*/
+
 		return 0;
 	}
 
