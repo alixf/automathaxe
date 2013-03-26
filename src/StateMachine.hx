@@ -487,8 +487,33 @@ class StateMachine
 		m1.intersect(m2).saveAsPNG();
 		//*/
 
-		///
+		/*//
 		// Determinization test
+		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m1.addState(new State("0", true, false));
+		var s1 = m1.addState(new State("1", false, false));
+		var s2 = m1.addState(new State("2", false, false));
+		var s3 = m1.addState(new State("3", false, true));
+		for(lexem in m1.alphabet)
+		{	
+			m1.addEdge(new Edge(lexem, s0, s1));
+			m1.addEdge(new Edge(lexem, s0, s2));
+			m1.addEdge(new Edge(lexem, s0, s3));
+			m1.addEdge(new Edge(lexem, s1, s0));
+			m1.addEdge(new Edge(lexem, s1, s2));
+			m1.addEdge(new Edge(lexem, s1, s3));
+			m1.addEdge(new Edge(lexem, s2, s0));
+			m1.addEdge(new Edge(lexem, s2, s1));
+			m1.addEdge(new Edge(lexem, s2, s3));
+			m1.addEdge(new Edge(lexem, s3, s0));
+			m1.addEdge(new Edge(lexem, s3, s1));
+			m1.addEdge(new Edge(lexem, s3, s2));
+		}
+		m1.determinize().saveAsPNG();
+		//*/
+
+		///
+		// Complementation test
 		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
 		var s1 = m1.addState(new State("1", false, false));
@@ -512,7 +537,6 @@ class StateMachine
 		m1.complement().saveAsPNG();
 		//*/
 		
-
 		return 0;
 	}
 
