@@ -65,11 +65,11 @@ class StateMachine
 				for(outEdge in state.outs)
 				{
 					if(outEdge.value == lexem)
-						found = true;
+					found = true;
 				}
 
 				if(!found)
-					res.addEdge(new Edge(lexem, state, well));
+				res.addEdge(new Edge(lexem, state, well));
 			}
 		}
 		return res;
@@ -191,57 +191,121 @@ class StateMachine
 		return res;
 	}
 
-	public function determine() : StateMachine
+	public function stateNameArrayToKey(array : Array<String>) : String
 	{
-		var res = copy();
+		array.sort(function(a,b) return Reflect.compare(a.toLowerCase(), b.toLowerCase()));
+		if(array.length <= 0)
+			return "";
+		return "s"+array.join("s");
+	}
 
-		var map = new Map<Array<State>, Map<String, Array<State>>>();
+	public function keyToStateNameArray(key : String) : Array<String>
+	{
+		if(key.length <= 0)
+			return new Array();
+		return key.split("s").slice(1);
+	}
 
-		// Initialize map with current states
-		for(state in res.states)
+	public function determinize() : StateMachine
+	{
+		function createLine(map : Map<String, Map<String, Array<State>>>, queue : Array<String>, key : String)
 		{
-			var key = [state];
 			map.set(key, new Map<String, Array<State>>());
-			for(lexem in res.alphabet)
-				map.get(key).set(lexem, new Array());
+			for(lexem in alphabet)
+				map.get(key).set(lexem, new Array<State>());
+			queue.push(key);
+		}
+		function arrayContains(array : Array<State>, value : State)
+		{
+			var res = false;
+			for(i in array)
+				res = res || (i == value);
+			return res;
 		}
 
+		var map = new Map<String, Map<String, Array<State>>>();
+		var queue = new Array<String>();
+
+		//
+		// Initialize map with current states
+		//
+		// Retrieve initial states' names
+		var initialStates = new Array();
+		for(state in states)
+			if(state.isInitial)
+				initialStates.push(state.name);
+
+		// Create empty line in the table
+		createLine(map, queue, stateNameArrayToKey(initialStates));
+
+		//
+		// Fill the determinization table
+		//
+		while(queue.length > 0)
+		{
+			var key = queue.shift();
+			var stateNames = keyToStateNameArray(key);
+			for(stateName in stateNames)
+			{
+				var state = getState(stateName);
+				for(edge in state.outs)
+					if(!arrayContains(map.get(key).get(edge.value), edge.to))
+						map.get(key).get(edge.value).push(edge.to);
+			}
+
+			for(lexem in alphabet)
+			{
+				var newStates = map.get(key).get(lexem);
+				var keysArray = [];
+				for(newState in newStates)
+					keysArray.push(newState.name);
+
+				var newKey = stateNameArrayToKey(keysArray);
+				if(newStates.length > 0 && !map.exists(newKey))
+					createLine(map, queue, newKey);
+			}
+		}
+
+		//
+		// Create states
+		//
+		var res = new StateMachine(new String(name), alphabet.copy());
 		for(key in map.keys())
 		{
-			for(state in key)
+			var isFinal = false;
+			for(stateName in keyToStateNameArray(key))
+				isFinal = isFinal || getState(stateName).isFinal;
+			res.addState(new State(new String(key), false, isFinal));
+		}
+		res.getState(stateNameArrayToKey(initialStates)).isInitial = true;
+
+		//
+		// Create edges
+		//
+		for(key in map.keys())
+		{
+			var state1 = res.getState(key);
+			for(lexem in res.alphabet)
 			{
-				for(edge in state.outs)
-					map.get(key).get(edge.value).push(edge.to);
-
-				for(lexem in res.alphabet)
+				var statesNames = [];
+				for(state in map.get(key).get(lexem))
+					statesNames.push(state.name);
+				var stateName = stateNameArrayToKey(statesNames);
+				if(stateName.length > 0)
 				{
-					var possibleNewKey = map.get(key).get(lexem);
-					if(possibleNewKey.length > 0)
-					{
-						// TODO check existence
-
-						Sys.print("[");
-						for(pouet in possibleNewKey)
-							Sys.print(pouet.name+" ");
-						Sys.println("] ");
-
-						map.set(possibleNewKey, new Map<String, Array<State>>());
-						for(lexem in res.alphabet)
-							map.get(possibleNewKey).set(lexem, new Array());
-					}
+					var state2 = res.getState(stateName);
+					res.addEdge(new Edge(lexem, state1, state2));
 				}
 			}
 		}
 
-		for(key in map.keys())
-		{
-			Sys.print("[");
-			for(state in key)
-				Sys.print(state.name+" ");
-			Sys.println("]");
-		}
+		//
+		// Rename states
+		//
+		var i = 0;
+		for(state in res.states)
+			state.name = Std.string(++i);
 
-		//TODO
 		return res;
 	}
 
@@ -407,11 +471,22 @@ class StateMachine
 		var s1 = m1.addState(new State("1", false, false));
 		var s2 = m1.addState(new State("2", false, false));
 		var s3 = m1.addState(new State("3", false, true));
-		m1.addEdge(new Edge("a", s0, s1));
-		m1.addEdge(new Edge("a", s1, s2));
-		m1.addEdge(new Edge("b", s2, s3));
-		m1.addEdge(new Edge("b", s3, s0));
-		m1.determine();
+		for(lexem in m1.alphabet)
+		{	
+			m1.addEdge(new Edge(lexem, s0, s1));
+			m1.addEdge(new Edge(lexem, s0, s2));
+			m1.addEdge(new Edge(lexem, s0, s3));
+			m1.addEdge(new Edge(lexem, s1, s0));
+			m1.addEdge(new Edge(lexem, s1, s2));
+			m1.addEdge(new Edge(lexem, s1, s3));
+			m1.addEdge(new Edge(lexem, s2, s0));
+			m1.addEdge(new Edge(lexem, s2, s1));
+			m1.addEdge(new Edge(lexem, s2, s3));
+			m1.addEdge(new Edge(lexem, s3, s0));
+			m1.addEdge(new Edge(lexem, s3, s1));
+			m1.addEdge(new Edge(lexem, s3, s2));
+		}
+		m1.determinize().saveAsPNG();
 		//*/
 		
 
