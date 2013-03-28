@@ -1,10 +1,16 @@
+/**
+	Instance of this class represent a state machine
+**/
 class StateMachine
 {
-	var name : String;
-	var alphabet : Array<String>;
-	var states : Array<State>;
-	var edges : Array<Edge>;
+	var name : String;				// The name of the machine
+	var alphabet : Array<String>;	// The alphabet of the machine, as an array of symbols
+	var states : Array<State>;		// The states of the machine, as an array of State
+	var edges : Array<Edge>;		// The edges of the machine, as an array of Edge
 
+	/**
+		Create a new state machine
+	**/
 	public function new(name : String, alphabet : Array<String>)
 	{
 		this.name = name;
@@ -13,12 +19,18 @@ class StateMachine
 		edges = new Array();
 	}
 
+	/**
+		Add a state to the machine
+	**/
 	public function addState(state : State) : State
 	{
 		states.push(state);
 		return state;
 	}
 
+	/**
+		Remove a state from the machine
+	**/
 	public function removeState(state : State) : State
 	{
 		var it = state.ins.iterator();
@@ -29,6 +41,9 @@ class StateMachine
 		return states.remove(state) ? state : null;
 	}
 
+	/**
+		Get a state of the machine from its name
+	**/
 	public function getState(name : String) : State
 	{
 		for(state in states)
@@ -37,6 +52,9 @@ class StateMachine
 		return null;
 	}
 
+	/**
+		Add an edge to the machine
+	**/
 	public function addEdge(edge : Edge) : Edge
 	{
 		edge.from.outs.push(edge);
@@ -45,6 +63,9 @@ class StateMachine
 		return edge;
 	}
 
+	/**
+		Remove an edge from the machine
+	**/
 	public function removeEdge(edge : Edge) : Edge
 	{
 		edge.from.outs.remove(edge);
@@ -52,16 +73,27 @@ class StateMachine
 		return edges.remove(edge) ? edge : null;
 	}
 
+	/**
+		Perform a deep copy of the machine, returning the copy
+		All states and edges are copied
+	**/
 	public function copy() : StateMachine
 	{
 		var res = new StateMachine(new String(name), alphabet.copy());
+
+		// Copy states
 		for(state in states)
 			res.addState(new State(new String(state.name), state.isInitial, state.isFinal));
+
+		// Copy edges
 		for(edge in edges)
 			res.addEdge(new Edge(new String(edge.value), res.getState(edge.from.name), res.getState(edge.to.name)));
 		return res;
 	}
 
+	/**
+		Return a new machine, which is equal to the object but complete
+	**/
 	public function complete() : StateMachine
 	{
 		// Create a copy with a well
@@ -70,14 +102,14 @@ class StateMachine
 
 		for(state in res.states)
 		{
-			for(lexem in res.alphabet)
+			for(symbol in res.alphabet)
 			{
 				var found = false;
 				for(outEdge in state.outs)
-					found = found || (outEdge.value == lexem);
+					found = found || (outEdge.value == symbol);
 
 				if(!found)
-					res.addEdge(new Edge(lexem, state, well));
+					res.addEdge(new Edge(symbol, state, well));
 			}
 		}
 
@@ -95,6 +127,9 @@ class StateMachine
 		return res;
 	}
 
+	/**
+		Return a new machine, which is the union between this machine and sm
+	**/
 	public function union(sm : StateMachine) : StateMachine
 	{
 		// Make local copies to work on
@@ -146,6 +181,9 @@ class StateMachine
 		return res;
 	}
 
+	/**
+		Return a new machine, which is the intersection between this machine an sm
+	**/
 	public function intersect(sm : StateMachine) : StateMachine
 	{
 		// Make local copies to work on
@@ -172,15 +210,16 @@ class StateMachine
 			for(s2 in sm2.states)
 				for(s3 in sm1.states)
 					for(s4 in sm2.states)
-						for(lexem in res.alphabet)
-							if(s1.getEdgeTo(s3, lexem) != null && s2.getEdgeTo(s4, lexem) != null)
-								res.addEdge(new Edge(lexem, res.getState("a"+s1.name+"b"+s2.name), res.getState("a"+s3.name+"b"+s4.name)));
+						for(symbol in res.alphabet)
+							if(s1.getEdgeTo(s3, symbol) != null && s2.getEdgeTo(s4, symbol) != null)
+								res.addEdge(new Edge(symbol, res.getState("a"+s1.name+"b"+s2.name), res.getState("a"+s3.name+"b"+s4.name)));
 
 		// Remove uneeded states
 		for(state in res.states)
 			if(state.ins.length == 0 && state.outs.length == 0)
 				res.removeState(state);
 
+		// Rename the states
 		var i = 0;
 		for(state in res.states)
 			state.name = Std.string(++i);
@@ -188,19 +227,27 @@ class StateMachine
 		return res;
 	}
 
+	/**
+		Return a new machine, which is a copy of this machine
+	**/
 	public function mirror() : StateMachine
 	{
 		var res = copy();
 
 		for(state in res.states)
 		{
+			// Swap "in" edge and "out" edges
 			var tmp1 = state.ins;
 			state.ins = state.outs;
 			state.outs = tmp1;
+
+			// Swap final and initial
 			var tmp2 = state.isFinal;
 			state.isFinal = state.isInitial;
 			state.isInitial = tmp2;
 		}
+
+		// Mirror edges
 		for(edge in res.edges)
 		{
 			var tmp = edge.to;
@@ -211,30 +258,25 @@ class StateMachine
 		return res;
 	}
 
-	public function stateNameArrayToKey(array : Array<String>) : String
-	{
-		array.sort(function(a,b) return Reflect.compare(a.toLowerCase(), b.toLowerCase()));
-		if(array.length <= 0)
-			return "";
-		return "s"+array.join("s");
-	}
 
-	public function keyToStateNameArray(key : String) : Array<String>
-	{
-		if(key.length <= 0)
-			return new Array();
-		return key.split("s").slice(1);
-	}
-
+	/**
+		Return a new state machine, which is equal to the object but determinist
+	**/
 	public function determinize() : StateMachine
 	{
+		/**
+			Create a line in the determinization table
+		**/
 		function createLine(map : Map<String, Map<String, Array<State>>>, queue : Array<String>, key : String)
 		{
 			map.set(key, new Map<String, Array<State>>());
-			for(lexem in alphabet)
-				map.get(key).set(lexem, new Array<State>());
+			for(symbol in alphabet)
+				map.get(key).set(symbol, new Array<State>());
 			queue.push(key);
 		}
+		/**
+			Check if an array contains a value
+		**/
 		function arrayContains(array : Array<State>, value : State)
 		{
 			var res = false;
@@ -242,7 +284,27 @@ class StateMachine
 				res = res || (i == value);
 			return res;
 		}
+		/**
+			Convert an array of string to a key
+		**/
+		function stateNameArrayToKey(array : Array<String>) : String
+		{
+			array.sort(function(a,b) return Reflect.compare(a.toLowerCase(), b.toLowerCase()));
+			if(array.length <= 0)
+				return "";
+			return "s"+array.join("s");
+		}
+		/**
+			Convert an key to an array of string
+		**/
+		function keyToStateNameArray(key : String) : Array<String>
+		{
+			if(key.length <= 0)
+				return new Array();
+			return key.split("s").slice(1);
+		}
 
+		// Create the determinization table and the new states queue
 		var map = new Map<String, Map<String, Array<State>>>();
 		var queue = new Array<String>();
 
@@ -273,9 +335,9 @@ class StateMachine
 						map.get(key).get(edge.value).push(edge.to);
 			}
 
-			for(lexem in alphabet)
+			for(symbol in alphabet)
 			{
-				var newStates = map.get(key).get(lexem);
+				var newStates = map.get(key).get(symbol);
 				var keysArray = [];
 				for(newState in newStates)
 					keysArray.push(newState.name);
@@ -305,16 +367,16 @@ class StateMachine
 		for(key in map.keys())
 		{
 			var state1 = res.getState(key);
-			for(lexem in res.alphabet)
+			for(symbol in res.alphabet)
 			{
 				var statesNames = [];
-				for(state in map.get(key).get(lexem))
+				for(state in map.get(key).get(symbol))
 					statesNames.push(state.name);
 				var stateName = stateNameArrayToKey(statesNames);
 				if(stateName.length > 0)
 				{
 					var state2 = res.getState(stateName);
-					res.addEdge(new Edge(lexem, state1, state2));
+					res.addEdge(new Edge(symbol, state1, state2));
 				}
 			}
 		}
@@ -329,26 +391,33 @@ class StateMachine
 		return res;
 	}
 
+	/**
+		Return a new state machine, reconizing the complement of the set of expressions recognized by the object
+	**/
 	public function complement() : StateMachine
 	{
 		var res = determinize();
 		res = res.complete();
+
+		// The final states become non-final and the non-final states become final
 		for(state in res.states)
 			state.isFinal = !state.isFinal;
+
 		return res;
 	}
 
+	/**
+		Return a new state machine, equal to the object but with the minimum state count possible
+	**/
 	public function minimize() : StateMachine 
 	{
 		return determinize().mirror().determinize().mirror();
 	}
 
-	public static function fromExpression(expression : String) : StateMachine
-	{
-		//TODO
-		return null;
-	}
-
+	/**
+		Return a string containing the description of the state machine in DOT Format
+		The DOT Format is used for visualization by GraphViz
+	**/
 	public function toDOT() : String
 	{
 		var res = "";
@@ -373,6 +442,9 @@ class StateMachine
 		return res;
 	}
 
+	/**
+		Render and save the state machine as a PNG Image
+	**/
 	public function saveAsPNG() : Void
 	{
 		sys.io.File.saveContent(name+".gv", toDOT());
@@ -381,48 +453,10 @@ class StateMachine
 
 	public static function main() : Int
 	{
-		/*
-		var m1 = new StateMachine("m1", ["a", "b"]);
-		var s0 = m1.addState(new State("0", true, true));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		var s4 = m1.addState(new State("4", false, true));
-		var s5 = m1.addState(new State("5", false, false));
-		var s6 = m1.addState(new State("6", false, true));
-		var s7 = m1.addState(new State("7", false, true));
-		m1.addEdge(new Edge("a", s0, s2));
-		m1.addEdge(new Edge("b", s0, s1));
-		m1.addEdge(new Edge("a", s1, s2));
-		m1.addEdge(new Edge("b", s1, s1));
-		m1.addEdge(new Edge("a", s2, s3));
-		m1.addEdge(new Edge("b", s2, s2));
-		m1.addEdge(new Edge("a", s3, s2));
-		m1.addEdge(new Edge("b", s3, s6));
-		m1.addEdge(new Edge("a", s4, s5));
-		m1.addEdge(new Edge("b", s4, s4));
-		m1.addEdge(new Edge("a", s5, s6));
-		m1.addEdge(new Edge("b", s5, s5));
-		m1.addEdge(new Edge("a", s6, s5));
-		m1.addEdge(new Edge("b", s6, s7));
-		m1.addEdge(new Edge("a", s7, s5));
-		m1.addEdge(new Edge("b", s7, s3));
-		m12.saveAsPNG();
-
-		var m2 = new StateMachine("m2", ["a", "b"]);
-		var s1 = m2.addState(new State("1", true, false));
-		var s2 = m2.addState(new State("2", false, true));
-		var s3 = m2.addState(new State("3", false, true));
-		m2.addEdge(new Edge("a", s1, s2));
-		m2.addEdge(new Edge("a", s3, s1));
-		m2.addEdge(new Edge("b", s2, s3));
-		m2.addEdge(new Edge("b", s3, s2));
-		m2.saveAsPNG();
-		*/
-		
-		/*//
+		///
 		// Completion test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
+		///
+		var m1 = new StateMachine("complete_before", ["a", "b", "c", "d", "e", "f"]);
 		var s0 = m1.addState(new State("0", true, false));
 		var s1 = m1.addState(new State("1", false, false));
 		var s2 = m1.addState(new State("2", false, false));
@@ -432,144 +466,177 @@ class StateMachine
 		m1.addEdge(new Edge("b", s2, s3));
 		m1.addEdge(new Edge("b", s3, s0));
 		m1.complete().saveAsPNG();
+		var m2 = m1.complete();
+		m2.name = "complete_after";
+		m2.saveAsPNG();
 		//*/
 
-		/*//
+		///
 		// Mirror test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		var s0 = m1.addState(new State("0", true, false));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		m1.addEdge(new Edge("a", s0, s1));
-		m1.addEdge(new Edge("a", s1, s2));
-		m1.addEdge(new Edge("b", s2, s3));
-		m1.addEdge(new Edge("b", s3, s0));
-		m1.mirror().saveAsPNG();
+		///
+		var m3 = new StateMachine("mirror_before", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m3.addState(new State("0", true, false));
+		var s1 = m3.addState(new State("1", false, false));
+		var s2 = m3.addState(new State("2", false, false));
+		var s3 = m3.addState(new State("3", false, true));
+		m3.addEdge(new Edge("a", s0, s1));
+		m3.addEdge(new Edge("a", s1, s2));
+		m3.addEdge(new Edge("b", s2, s3));
+		m3.addEdge(new Edge("b", s3, s0));
+		m3.mirror().saveAsPNG();
+		var m4 = m1.mirror();
+		m4.name = "mirror_after";
+		m4.saveAsPNG();
 		//*/
 
-		/*//
+		///
 		// Union test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		var s0 = m1.addState(new State("0", true, false));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		m1.addEdge(new Edge("a", s0, s1));
-		m1.addEdge(new Edge("a", s1, s2));
-		m1.addEdge(new Edge("b", s2, s3));
-		m1.addEdge(new Edge("b", s3, s0));
-		m1.union(m1).saveAsPNG();
+		///
+		var m5 = new StateMachine("union_before_a", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m5.addState(new State("0", true, false));
+		var s1 = m5.addState(new State("1", false, false));
+		var s2 = m5.addState(new State("2", false, false));
+		var s3 = m5.addState(new State("3", false, true));
+		m5.addEdge(new Edge("a", s0, s1));
+		m5.addEdge(new Edge("a", s1, s2));
+		m5.addEdge(new Edge("b", s2, s3));
+		m5.addEdge(new Edge("b", s3, s0));
+
+		var m6 = new StateMachine("union_before_b", ["a", "b"]);
+		var s2 = m6.addState(new State("2", true, true));
+		var s3 = m6.addState(new State("3", false, false));
+		var s4 = m6.addState(new State("4", false, false));
+		m6.addEdge(new Edge("a", s2, s2));
+		m6.addEdge(new Edge("a", s3, s3));
+		m6.addEdge(new Edge("a", s4, s4));
+		m6.addEdge(new Edge("b", s2, s3));
+		m6.addEdge(new Edge("b", s3, s4));
+		m6.addEdge(new Edge("b", s4, s2));
+
+		m5.mirror().saveAsPNG();
+		m6.mirror().saveAsPNG();
+		
+		var m7 = m5.union(m6);
+		m7.name = "union_after";
+		m7.saveAsPNG();
 		//*/
 
-		/*//
+		///
 		// Intersection test
-		var m1 = new StateMachine("m1", ["a", "b"]);
-		var s0 = m1.addState(new State("0", true, true));
-		var s1 = m1.addState(new State("1", false, false));
-		m1.addEdge(new Edge("a", s0, s0));
-		m1.addEdge(new Edge("a", s1, s1));
-		m1.addEdge(new Edge("b", s0, s1));
-		m1.addEdge(new Edge("b", s1, s0));
+		///
+		var m8 = new StateMachine("intersection_before_a", ["a", "b"]);
+		var s0 = m8.addState(new State("0", true, true));
+		var s1 = m8.addState(new State("1", false, false));
+		m8.addEdge(new Edge("a", s0, s0));
+		m8.addEdge(new Edge("a", s1, s1));
+		m8.addEdge(new Edge("b", s0, s1));
+		m8.addEdge(new Edge("b", s1, s0));
 
-		var m2 = new StateMachine("m2", ["a", "b"]);
-		var s2 = m2.addState(new State("2", true, true));
-		var s3 = m2.addState(new State("3", false, false));
-		var s4 = m2.addState(new State("4", false, false));
-		m2.addEdge(new Edge("a", s2, s2));
-		m2.addEdge(new Edge("a", s3, s3));
-		m2.addEdge(new Edge("a", s4, s4));
-		m2.addEdge(new Edge("b", s2, s3));
-		m2.addEdge(new Edge("b", s3, s4));
-		m2.addEdge(new Edge("b", s4, s2));
+		var m9 = new StateMachine("intersection_before_b", ["a", "b"]);
+		var s2 = m9.addState(new State("2", true, true));
+		var s3 = m9.addState(new State("3", false, false));
+		var s4 = m9.addState(new State("4", false, false));
+		m9.addEdge(new Edge("a", s2, s2));
+		m9.addEdge(new Edge("a", s3, s3));
+		m9.addEdge(new Edge("a", s4, s4));
+		m9.addEdge(new Edge("b", s2, s3));
+		m9.addEdge(new Edge("b", s3, s4));
+		m9.addEdge(new Edge("b", s4, s2));
 
-		m1.intersect(m2).saveAsPNG();
+		m8.saveAsPNG();
+		m9.saveAsPNG();
+		var m10 = m8.intersect(m9);
+		m10.name="intersection_after";
+		m10.saveAsPNG();
 		//*/
 
-		/*//
+		///
 		// Determinization test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		var s0 = m1.addState(new State("0", true, false));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		for(lexem in m1.alphabet)
+		///
+		var m11 = new StateMachine("determinize_before", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m11.addState(new State("0", true, false));
+		var s1 = m11.addState(new State("1", false, false));
+		var s2 = m11.addState(new State("2", false, false));
+		var s3 = m11.addState(new State("3", false, true));
+		for(symbol in m11.alphabet)
 		{	
-			m1.addEdge(new Edge(lexem, s0, s1));
-			m1.addEdge(new Edge(lexem, s0, s2));
-			m1.addEdge(new Edge(lexem, s0, s3));
-			m1.addEdge(new Edge(lexem, s1, s0));
-			m1.addEdge(new Edge(lexem, s1, s2));
-			m1.addEdge(new Edge(lexem, s1, s3));
-			m1.addEdge(new Edge(lexem, s2, s0));
-			m1.addEdge(new Edge(lexem, s2, s1));
-			m1.addEdge(new Edge(lexem, s2, s3));
-			m1.addEdge(new Edge(lexem, s3, s0));
-			m1.addEdge(new Edge(lexem, s3, s1));
-			m1.addEdge(new Edge(lexem, s3, s2));
+			m11.addEdge(new Edge(symbol, s0, s1));
+			m11.addEdge(new Edge(symbol, s0, s2));
+			m11.addEdge(new Edge(symbol, s0, s3));
+			m11.addEdge(new Edge(symbol, s1, s0));
+			m11.addEdge(new Edge(symbol, s1, s2));
+			m11.addEdge(new Edge(symbol, s1, s3));
+			m11.addEdge(new Edge(symbol, s2, s0));
+			m11.addEdge(new Edge(symbol, s2, s1));
+			m11.addEdge(new Edge(symbol, s2, s3));
+			m11.addEdge(new Edge(symbol, s3, s0));
+			m11.addEdge(new Edge(symbol, s3, s1));
+			m11.addEdge(new Edge(symbol, s3, s2));
 		}
-		m1.determinize().saveAsPNG();
+		m11.saveAsPNG();
+		var m12 = m11.determinize();
+		m12.name="determinize_after";
+		m12.saveAsPNG();
 		//*/
 
-		/*//
+		///
 		// Complementation test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		var s0 = m1.addState(new State("0", true, false));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		for(lexem in m1.alphabet)
+		///
+		var m13 = new StateMachine("complement_before", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m13.addState(new State("0", true, false));
+		var s1 = m13.addState(new State("1", false, false));
+		var s2 = m13.addState(new State("2", false, false));
+		var s3 = m13.addState(new State("3", false, true));
+		for(symbol in m13.alphabet)
 		{	
-			m1.addEdge(new Edge(lexem, s0, s1));
-			m1.addEdge(new Edge(lexem, s0, s2));
-			m1.addEdge(new Edge(lexem, s0, s3));
-			m1.addEdge(new Edge(lexem, s1, s0));
-			m1.addEdge(new Edge(lexem, s1, s2));
-			m1.addEdge(new Edge(lexem, s1, s3));
-			m1.addEdge(new Edge(lexem, s2, s0));
-			m1.addEdge(new Edge(lexem, s2, s1));
-			m1.addEdge(new Edge(lexem, s2, s3));
-			m1.addEdge(new Edge(lexem, s3, s0));
-			m1.addEdge(new Edge(lexem, s3, s1));
-			m1.addEdge(new Edge(lexem, s3, s2));
+			m13.addEdge(new Edge(symbol, s0, s1));
+			m13.addEdge(new Edge(symbol, s0, s2));
+			m13.addEdge(new Edge(symbol, s0, s3));
+			m13.addEdge(new Edge(symbol, s1, s0));
+			m13.addEdge(new Edge(symbol, s1, s2));
+			m13.addEdge(new Edge(symbol, s1, s3));
+			m13.addEdge(new Edge(symbol, s2, s0));
+			m13.addEdge(new Edge(symbol, s2, s1));
+			m13.addEdge(new Edge(symbol, s2, s3));
+			m13.addEdge(new Edge(symbol, s3, s0));
+			m13.addEdge(new Edge(symbol, s3, s1));
+			m13.addEdge(new Edge(symbol, s3, s2));
 		}
-		m1.complement().saveAsPNG();
+		m13.saveAsPNG();
+		var m14 = m13.complement();
+		m14.name="complement_after";
+		m14.saveAsPNG();
 		//*/
 		
 		///
 		// Minimization test
-		var m1 = new StateMachine("m1", ["a", "b", "c", "d", "e", "f"]);
-		var s0 = m1.addState(new State("0", true, false));
-		var s1 = m1.addState(new State("1", false, false));
-		var s2 = m1.addState(new State("2", false, false));
-		var s3 = m1.addState(new State("3", false, true));
-		for(lexem in m1.alphabet)
+		///
+		var m15 = new StateMachine("minimize_before", ["a", "b", "c", "d", "e", "f"]);
+		var s0 = m15.addState(new State("0", true, false));
+		var s1 = m15.addState(new State("1", false, false));
+		var s2 = m15.addState(new State("2", false, false));
+		var s3 = m15.addState(new State("3", false, true));
+		for(symbol in m15.alphabet)
 		{	
-			m1.addEdge(new Edge(lexem, s0, s1));
-			m1.addEdge(new Edge(lexem, s0, s2));
-			m1.addEdge(new Edge(lexem, s0, s3));
-			m1.addEdge(new Edge(lexem, s1, s0));
-			m1.addEdge(new Edge(lexem, s1, s2));
-			m1.addEdge(new Edge(lexem, s1, s3));
-			m1.addEdge(new Edge(lexem, s2, s0));
-			m1.addEdge(new Edge(lexem, s2, s1));
-			m1.addEdge(new Edge(lexem, s2, s3));
-			m1.addEdge(new Edge(lexem, s3, s0));
-			m1.addEdge(new Edge(lexem, s3, s1));
-			m1.addEdge(new Edge(lexem, s3, s2));
+			m15.addEdge(new Edge(symbol, s0, s1));
+			m15.addEdge(new Edge(symbol, s0, s2));
+			m15.addEdge(new Edge(symbol, s0, s3));
+			m15.addEdge(new Edge(symbol, s1, s0));
+			m15.addEdge(new Edge(symbol, s1, s2));
+			m15.addEdge(new Edge(symbol, s1, s3));
+			m15.addEdge(new Edge(symbol, s2, s0));
+			m15.addEdge(new Edge(symbol, s2, s1));
+			m15.addEdge(new Edge(symbol, s2, s3));
+			m15.addEdge(new Edge(symbol, s3, s0));
+			m15.addEdge(new Edge(symbol, s3, s1));
+			m15.addEdge(new Edge(symbol, s3, s2));
 		}
-		m1.minimize().saveAsPNG();
+		m15.saveAsPNG();
+		var m16 = m15.minimize();
+		m16.name="minimize_after";
+		m16.saveAsPNG();
 		//*/
 
 		return 0;
 	}
-
-	/*
-	Choisissez au moins une de ces questions pour terminer :
-	a) Montrer l’algorithme du double renversement, comme proposé dans la feuille de TD no 3.
-	b) Écrire un analyseur d’expressions rationnelles, qui convertit les expressions rationnelles, données
-	comme chaînes de caractères de la forme (a + b * a)*, en listes Python, de la forme ["*",
-	["+", ["a", [".", ["*","b"], ["a"]]]]].
-
-	*/
 }
